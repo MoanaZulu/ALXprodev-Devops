@@ -24,3 +24,51 @@ for pokemon in "${POKEMONS[@]}"; do
     # Delay to avoid rate limiting
     sleep 2
 done
+
+
+#!/bin/bash
+# Script: batchProcessing-0x02
+# Objective: Fetch multiple Pokémon data with retry logic
+# Retries up to 3 times before logging error
+
+POKEMONS=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+OUTPUT_DIR="pokemon_data"
+ERROR_FILE="errors.txt"
+
+# Create output directory if it doesn't exist
+mkdir -p "$OUTPUT_DIR"
+
+# Clear previous error log
+> "$ERROR_FILE"
+
+# Function to fetch Pokémon data with retry logic
+fetch_pokemon() {
+    local pokemon=$1
+    local retries=0
+    local success=false
+
+    echo "Fetching data for $pokemon..."
+
+    # Retry up to 3 times
+    while [ $retries -lt 3 ]; do
+        curl -s -f "https://pokeapi.co/api/v2/pokemon/$pokemon" -o "$OUTPUT_DIR/$pokemon.json"
+        if [ $? -eq 0 ]; then
+            echo "Saved data to $OUTPUT_DIR/$pokemon.json ✅"
+            success=true
+            break
+        else
+            retries=$((retries+1))
+            echo "⚠️ Attempt $retries failed for $pokemon. Retrying..."
+            sleep 2
+        fi
+    done
+
+    if [ "$success" = false ]; then
+        echo "❌ Failed to fetch data for $pokemon after 3 attempts" | tee -a "$ERROR_FILE"
+    fi
+}
+
+# Loop through each Pokémon
+for pokemon in "${POKEMONS[@]}"; do
+    fetch_pokemon "$pokemon"
+done
